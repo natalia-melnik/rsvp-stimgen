@@ -11,6 +11,8 @@ from matplotlib.patches import Arc
 import cv2
 import math
 import re
+import pandas as pd
+
 
 def openImage(i):
     return Image.open(i)
@@ -173,10 +175,17 @@ def crop_center(pil_img, crop_width, crop_height):
                          (img_width + crop_width) // 2,
                          (img_height + crop_height) // 2))
 
-def doVideo(fold, savefold, mask='*.jpg',frames=2, sortNaturally=False, shuffle1=False, black_first=True, blackSec=2, black_last=True, blackSecLast=1):
-    img_array = []
-
-    if black_first:
+def doVideo(fold, savefold, mask='*.jpg',frames=2, sortNaturally=False, shuffle1=False, black_first=True, blackSec=2, black_last=True, blackSecLast=1, printReport=False):
+	img_array=[]
+	if printReport: 
+		imageIDs = []
+	else:
+		pass
+	if black_first:
+		if printReport: 
+			imageIDs.append('black_background')
+		else: pass
+		
         filename = glob.glob(fold+'*.jpg')[0]
         img = cv2.imread(filename)
         height, width, layers = img.shape
@@ -192,45 +201,51 @@ def doVideo(fold, savefold, mask='*.jpg',frames=2, sortNaturally=False, shuffle1
         size = (width, height)
         for sec in range(0,blackSec*frames):
             img_array.append(img)
-
-
-    if sortNaturally:
-       
-        for filename in  natural_sort(glob.glob(fold+'*.jpg')):
-            img = cv2.imread(filename)
-            #img = cv2.resize(img, (100, 50)) 
-            height, width, layers = img.shape
-            size = (width,height)
-            img_array.append(img)
-    else:
-        if shuffle1:
-            fff = glob.glob(fold+mask)
-            shuffle(fff)
-            fff = fff[0:361]
-            
-            for filename in fff:
-                img = cv2.imread(filename)
-                #img = cv2.resize(img, (100, 50)) 
-                height, width, layers = img.shape
-                size = (width,height)
-                img_array.append(img)
-
-        else:
-            for filename in glob.glob(fold+mask):
-                img = cv2.imread(filename)
-                #img = cv2.resize(img, (100, 50)) 
-                height, width, layers = img.shape
-                size = (width,height)
-                img_array.append(img)
-
-    if black_last:
-        filename = glob.glob(fold+'*.jpg')[0]
-        img = cv2.imread(filename)
-        height, width, layers = img.shape
-        size = (width, height)
-
-        my_dpi = size[0]
-        plt.figure(figsize=(my_dpi / my_dpi, my_dpi / my_dpi), dpi=my_dpi)
+	if sortNaturally:
+		for filename in  natural_sort(glob.glob(fold+'*.jpg')):
+			if printReport: 
+				imageIDs.append(filename)
+			else: 
+				pass
+			img = cv2.imread(filename)
+			height, width, layers = img.shape
+			size = (width,height)
+			img_array.append(img)
+	else:
+		if shuffle1:
+			fff = glob.glob(fold+mask)
+			shuffle(fff)
+			fff = fff[0:361]
+			for filename in fff:
+				if printReport: 
+					imageIDs.append(filename)
+				else: 
+					pass 
+				img = cv2.imread(filename)
+				height, width, layers = img.shape
+				size = (width,height)
+				img_array.append(img)
+		else:
+			for filename in glob.glob(fold+mask):
+				if printReport: 
+					imageIDs.append(filename)
+				else: 
+					pass
+				img = cv2.imread(filename)
+				height, width, layers = img.shape
+				size = (width,height)
+				img_array.append(img)
+	if black_last:
+		if printReport: 
+			imageIDs.append('black_background')
+		else:
+			pass
+		filename = glob.glob(fold+'*.jpg')[0]
+		img = cv2.imread(filename)
+		height, width, layers = img.shape
+		size = (width, height)
+		my_dpi = size[0]
+		plt.figure(figsize=(my_dpi / my_dpi, my_dpi / my_dpi), dpi=my_dpi)
         plt.subplots_adjust(0, 0, 1, 1)  # set white border size
         plt.savefig('temp-k.jpg', facecolor='black')  # save what's currently drawn
         img = cv2.imread('temp-k.jpg')
@@ -239,11 +254,13 @@ def doVideo(fold, savefold, mask='*.jpg',frames=2, sortNaturally=False, shuffle1
         size = (width, height)
         for sec in range(0,blackSecLast*frames):
             img_array.append(img)
-
-    out = cv2.VideoWriter(savefold,cv2.VideoWriter_fourcc(*'DIVX'), frames, size)
-    for i in range(len(img_array)):
-        out.write(img_array[i])
-    out.release()
+	
+	out = cv2.VideoWriter(savefold,cv2.VideoWriter_fourcc(*'DIVX'), frames, size)
+	if printReport:
+		pd.DataFrame(imageIDs).to_csv(savefold+'_idx.csv')
+	for i in range(len(img_array)):
+		out.write(img_array[i])
+	out.release()
     
 
 
